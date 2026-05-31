@@ -1,7 +1,12 @@
 import mongoose from "mongoose";
+import dns from "node:dns";
 
 // connect to MongoDB
 const connectDB = async () => {
+  // Force Node.js to use Cloudflare DNS (1.1.1.1) to resolve SRV records.
+  // This bypasses local DNS issues that often cause "querySrv ECONNREFUSED".
+  dns.setServers(["1.1.1.1"]);
+
   try {
     // 1. Pre-flight check
     if (!process.env.MONGO_URI) {
@@ -41,7 +46,19 @@ const connectDB = async () => {
 
     return conn;
   } catch (error) {
-    console.error(`❌ Database Connection Error: ${error.message}`);
+    if (
+      error.message.includes("querySrv ETIMEOUT") ||
+      error.message.includes("ECONNREFUSED")
+    ) {
+      console.error(
+        "❌ Database Connection Error: Network/DNS issue detected.",
+      );
+      console.error(
+        "💡 Hint: Check your Atlas IP Whitelist or try a non-SRV connection string.",
+      );
+    } else {
+      console.error(`❌ Database Connection Error: ${error.message}`);
+    }
     process.exit(1);
   }
 };
