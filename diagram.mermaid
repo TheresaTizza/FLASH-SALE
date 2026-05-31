@@ -1,0 +1,38 @@
+graph TB
+    subgraph Client_Tier [Client Tier]
+        React[React.js Web App]
+    end
+
+    subgraph Entry_Point [Traffic Management]
+        NGINX[Nginx Load Balancer]
+        Gateway[Express.js API Gateway]
+    end
+
+    subgraph Async_Message_Broker [Event Infrastructure]
+        Redis[(Redis Cluster)]
+        Queue[BullMQ: Order Processing]
+        PubSub[Redis Pub/Sub: Real-time Events]
+    end
+
+    subgraph Processing_Tier [Worker Services]
+        Worker[Node.js Order Worker]
+        Inventory[Inventory Validator]
+    end
+
+    subgraph Data_Persistence [Data Tier]
+        MongoDB[(MongoDB Atlas)]
+    end
+
+    %% Flow
+    React -- HTTP/POST --> NGINX
+    NGINX --> Gateway
+    Gateway -- Job Producer --> Queue
+    Queue -- Persisted In --> Redis
+    
+    Worker -- Job Consumer --> Queue
+    Worker -- Atomic Update --> MongoDB
+    Worker -- Publish Status --> PubSub
+    
+    PubSub -- Notify --> Gateway
+    Gateway -- WebSocket Push --> React
+
